@@ -21,18 +21,29 @@ namespace faultnet_demo_api {
             this.logger = logger;
         }
 
-        [HttpGet("/allfaults")]
+        [HttpGet("/allrecords")]
         public async Task<ActionResult<IEnumerable<FaultRecord>>> GetAllRecords() {
             return await databaseContext.FaultRecords.ToListAsync();
         }
 
+        [HttpGet("/allfaults")]
+        public async Task<ActionResult<IEnumerable<FaultRecord>>> GetAllFaults() {
+            return await databaseContext.FaultRecords.Where(r => r.IsLatCrackFault || r.IsLongCrackFault || r.IsCrocodileCrackFault || r.IsPotholeFault || r.IsLineblurFault).ToListAsync();
+        }
+
+        [HttpGet("/realtimerecords")]
+        public async Task<ActionResult<IEnumerable<FaultRecord>>> GetRealtimeRecords() {
+            int count = timer.PollTriggerCounter();     // May block on the singleton lock, so aquire this stack variable outside of the async filter call
+            return await databaseContext.FaultRecords.Where(f => f.Row < count).ToListAsync();
+        }
+
         [HttpGet("/realtimefaults")]
-        public async Task<ActionResult<IEnumerable<FaultRecord>>> GetFaultNetRecords() {
-            var faults = await databaseContext.FaultRecords.ToListAsync();
-            return faults.GetRange(0, Math.Min(faults.Count, timer.PollTriggerCounter()));
+        public async Task<ActionResult<IEnumerable<FaultRecord>>> GetRealtimeFaults() {
+            int count = timer.PollTriggerCounter();     // May block on the singleton lock, so aquire this stack variable outside of the async filter call
+            return await databaseContext.FaultRecords.Where(f => f.Row < count).Where(r => r.IsLatCrackFault || r.IsLongCrackFault || r.IsCrocodileCrackFault || r.IsPotholeFault || r.IsLineblurFault).ToListAsync();
         }
         
-        [HttpPost("/addfaults")]
+        [HttpPost("/add")]
         public async Task<IActionResult> AddNewFaults([FromBody] IList<FaultRecord> newFaults) {
             int count = await CountRecords();
             await AddNewRecords(newFaults);
@@ -42,7 +53,7 @@ namespace faultnet_demo_api {
             });
         }
 
-        [HttpPost("/overwritefaults")]
+        [HttpPost("/overwrite")]
         public async Task<IActionResult> OverwriteFaults([FromBody] IList<FaultRecord> newFaults) {
             await VaporiseCurrentRecords();
             await AddNewRecords(newFaults);
