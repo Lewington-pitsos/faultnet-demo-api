@@ -1,0 +1,17 @@
+# Install dotnet core 3.1 SDK
+
+### Add Microsoft package signing key (Replace UBUNTU VERSION with e.g. 20.04)
+wget https://packages.microsoft.com/config/ubuntu/<UBUTNU VERSION>/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+sudo dpkg -i packages-microsoft-prod.deb
+
+### Install dotnet core 3.1 SDK
+sudo apt-get update; sudo apt-get install -y apt-transport-https && sudo apt-get update && sudo apt-get install -y dotnet-sdk-3.1
+
+# Run dat shit (from repo root dir, where the .csproj file is)
+dotnet restore
+dotnet run
+
+# You'll only need to do dotnet restore the first time, which fetches all deps and downloads them and shit.
+
+
+
