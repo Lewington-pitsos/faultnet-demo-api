@@ -10,8 +10,9 @@ namespace faultnet_demo_api {
     }
 
     public class UtcTimer : IGlobalTimer {
-        private const int MIN_TRIGGER_TIME_MILLIS = 300;
-        private const int MAX_TRIGGER_TIME_MILLIS = 1500;
+        private const int MIN_TRIGGER_TIME_MILLIS = 150;
+        private const int MAX_TRIGGER_TIME_MILLIS = 300;
+        private const int TRIGGER_COUNT_INCREMENT = 10;
         private static readonly Random RAND = new Random();
         private static object pollLock = new object();          // Multiple request threads may be trying to poll the trigger count, so we hackily lock. This is truly awful design, but meh
 
@@ -36,11 +37,11 @@ namespace faultnet_demo_api {
                 long curr = CurrentTime();
                 // Escape after long periods of time without doing more than 500 RAND calls
                 if (curr > theNextTriggerTime + 500 * MIN_TRIGGER_TIME_MILLIS) {
-                    theTriggerCount += 500;
+                    theTriggerCount += 500 * TRIGGER_COUNT_INCREMENT;
                     theNextTriggerTime = curr + Interval();
                 }
                 while (theNextTriggerTime < curr) {
-                    theTriggerCount++;
+                    theTriggerCount += TRIGGER_COUNT_INCREMENT;
                     theNextTriggerTime += Interval();
                 }
                 return theTriggerCount;
