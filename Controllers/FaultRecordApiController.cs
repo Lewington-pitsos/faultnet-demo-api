@@ -32,24 +32,37 @@ namespace faultnet_demo_api {
         }
 
         [HttpGet("/realtimerecords")]
-        public async Task<ActionResult<IEnumerable<FaultRecord>>> GetRealtimeRecords() {
+        public async Task<ActionResult<IEnumerable<FaultRecord>>> GetRealtimeRecords([FromQuery] int lastseen = -1) {
             int count = timer.PollTriggerCounter();     // May block on the singleton lock, so aquire this stack variable outside of the async filter call
-            return await databaseContext.FaultRecords.Where(f => f.Row < count).ToListAsync();
+            return await databaseContext.FaultRecords.Where(f => f.Row > lastseen && f.Row < count).ToListAsync();
         }
 
         [HttpGet("/realtimefaults")]
-        public async Task<ActionResult<IEnumerable<FaultRecord>>> GetRealtimeFaults() {
+        public async Task<ActionResult<IEnumerable<FaultRecord>>> GetRealtimeFaults([FromQuery] int lastseen = -1) {
             int count = timer.PollTriggerCounter();     // May block on the singleton lock, so aquire this stack variable outside of the async filter call
-            return await databaseContext.FaultRecords.Where(f => f.Row < count).Where(r => r.IsLatCrackFault || r.IsLongCrackFault || r.IsCrocodileCrackFault || r.IsPotholeFault || r.IsLineblurFault).ToListAsync();
+            return await databaseContext.FaultRecords.Where(f => f.Row > lastseen && f.Row < count).Where(r => r.IsLatCrackFault || r.IsLongCrackFault || r.IsCrocodileCrackFault || r.IsPotholeFault || r.IsLineblurFault).ToListAsync();
         }
         
+        [HttpGet("/realtimestream")]
+        public async Task<IActionResult> GetRealtimeStreams([FromQuery] int lastseen = -1) {
+            int count = timer.PollTriggerCounter();     // May block on the singleton lock, so aquire this stack variable outside of the async filter call
+            var totalCount = await CountRecords();
+            var records = await databaseContext.FaultRecords.Where(f => f.Row > lastseen && f.Row < count).ToListAsync();
+            var faults = records.Where(r => r.IsLatCrackFault || r.IsLongCrackFault || r.IsCrocodileCrackFault || r.IsPotholeFault || r.IsLineblurFault).ToList();
+            return Ok(new {
+                isProcessing = count < totalCount,   
+                faults = faults,
+                records = records
+            });
+        }
+
         [HttpPost("/add")]
         public async Task<IActionResult> AddNewFaults([FromBody] IList<FaultRecord> newFaults) {
             int count = await CountRecords();
             await AddNewRecords(newFaults);
             timer.ReadAndRecordTime(Math.Min(timer.PollTriggerCounter(), count));
             return Ok(new {
-                faults = newFaults
+                newRecords = newFaults
             });
         }
 
@@ -59,7 +72,7 @@ namespace faultnet_demo_api {
             await AddNewRecords(newFaults);
             timer.ReadAndRecordTime(0);
             return Ok(new {
-                faults = newFaults
+                newRecords = newFaults
             });
         }
 
