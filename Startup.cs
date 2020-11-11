@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.Certificate;
 
 namespace faultnet_demo_api {
     public class Startup {
@@ -26,6 +27,7 @@ namespace faultnet_demo_api {
             services.AddSingleton<IGlobalTimer, UtcTimer>();
             services.AddDbContext<FaultRecordDatabaseContext>(options => options.UseInMemoryDatabase("FaultRecords"));
             services.AddControllers();
+            services.AddAuthentication(CertificateAuthenticationDefaults.AuthenticationScheme).AddCertificate().AddCertificateCache();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -40,6 +42,7 @@ namespace faultnet_demo_api {
             app.UseEndpoints(endpoints => {
                 endpoints.MapControllers();
             });
+            app.UseAuthentication();
         }
     }
 }
